@@ -1,4 +1,3 @@
-// netlify/functions/chat.js
 const fetch = require("node-fetch");
 
 exports.handler = async (event) => {
@@ -6,14 +5,31 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || "{}");
     const message = body.message || "";
     const imageDataUrl = body.imageDataUrl || null; // data:image/...
+    const imageUrl = body.imageUrl || null; // phòng khi bạn dùng URL ngoài
 
-    let userContent = message;
-    if (imageDataUrl) userContent += `\n\n[IMAGE_DATA_URL]\n${imageDataUrl}`;
+    // Tạo nội dung gửi cho OpenAI
+    const userContent = [];
+
+    if (message) {
+      userContent.push({ type: "text", text: message });
+    }
+
+    if (imageDataUrl) {
+      userContent.push({
+        type: "image_url",
+        image_url: { url: imageDataUrl }
+      });
+    } else if (imageUrl) {
+      userContent.push({
+        type: "image_url",
+        image_url: { url: imageUrl }
+      });
+    }
 
     const payload = {
-      model: "gpt-4o-mini", // ví dụ, đổi nếu cần / nếu account có model khác
+      model: "gpt-4o", // 👈 đảm bảo model có khả năng đọc ảnh
       messages: [
-        { role: "system", content: "Bạn là trợ lý giúp học tập, trả lời chi tiết." },
+        { role: "system", content: "Bạn là trợ lý giải bài tập, hãy mô tả và giải chi tiết." },
         { role: "user", content: userContent }
       ],
       max_tokens: 800
