@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI đọc ảnh - Demo</title>
+<style>body{font-family:Arial;background:#0b1220;color:#eef;padding:20px} .card{max-width:760px;margin:30px auto;padding:18px;background:#07101a;border-radius:10px} textarea{width:100%;height:120px;border-radius:8px;padding:8px} pre{white-space:pre-wrap;background:#04101a;padding:10px;border-radius:8px}</style>
+</head>
+<body>
+<div class="card">
+  <h2>AI đọc ảnh (nhanh)</h2>
+  <label>Câu hỏi / chú thích:</label>
+  <textarea id="txt" placeholder="Viết mô tả hoặc câu hỏi..."></textarea>
+  <label>Tải ảnh (≤ ~3MB):</label>
+  <input type="file" id="img" accept="image/*">
+  <div style="margin-top:8px"><button id="send">Gửi</button> <span id="st"></span></div>
+  <h3>Phản hồi:</h3>
+  <pre id="out">Chưa có kết quả.</pre>
+</div>
+
+<script>
+async function fileToDataUrl(f){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result);
+    r.onerror=rej;
+    r.readAsDataURL(f);
+  });
+}
+document.getElementById("send").onclick = async ()=>{
+  const st = document.getElementById("st"); st.textContent="Đang gửi...";
+  const out = document.getElementById("out");
+  const text = document.getElementById("txt").value || "";
+  const f = document.getElementById("img").files[0];
+  let dataUrl = null;
+  if(f){
+    if(f.size > 3*1024*1024){ alert("Ảnh quá lớn, hãy chọn < ~3MB"); st.textContent=""; return; }
+    dataUrl = await fileToDataUrl(f);
+  }
+  try{
+    const r = await fetch('/.netlify/functions/chat', {
+      method:'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ message: text, imageDataUrl: dataUrl })
+    });
+    const j = await r.json();
+    if(j.choices && j.choices[0] && j.choices[0].message) out.textContent = j.choices[0].message.content;
+    else out.textContent = JSON.stringify(j, null, 2);
+  }catch(e){ out.textContent = "Lỗi: "+e.message; }
+  st.textContent="";
+}
+</script>
+</body>
+</html>
